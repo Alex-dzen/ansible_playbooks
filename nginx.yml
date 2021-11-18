@@ -1,0 +1,30 @@
+---
+- name: hadoop testing
+  hosts: prod_servers
+  become: yes
+  
+  tasks:
+  - name: install nginx
+    apt:
+      name: nginx
+      state: latest
+  
+  - name: nginx systemd
+    systemd:
+      name: nginx
+      enabled: yes
+      state: started
+
+  - name: check nginx welcome page
+    ansible.builtin.raw: curl 192.168.1.9
+    register: result
+
+  - name: format result
+    ansible.builtin.raw:  echo "{{result.stdout}}" | grep -o -w 'Welcome to nginx!' | sort -u |  tr -s '\r\n' '-' 
+    register: result
+    
+  - name: nginx status msg
+    ansible.builtin.debug:
+      msg: "Nginx OK"
+    when: result.stdout == "Welcome to nginx!-"
+    

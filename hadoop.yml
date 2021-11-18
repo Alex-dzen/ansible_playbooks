@@ -1,0 +1,51 @@
+---
+
+- name: hadoop testing
+  hosts: prod_servers
+  become: yes
+  
+
+  tasks:
+    - name: chek services 
+      block:
+        - name: check Zookeper
+          ansible.builtin.raw: echo stat |  nc 192.168.1.11 2181 | grep -o  Zookeeper | tr -s '\r\n' '-'
+          register: result
+  
+
+        - name: check Oozie
+          ansible.builtin.raw: curl 192.168.1.11:11000/oozie/v1/admin/build-version  
+          register: result1
+
+        - name: format oozie result
+          ansible.builtin.raw:  echo "{{result1.stdout}}" | grep -o -w 'buildVersion' |  sort -u | tr -s '\r\n' '-' 
+          register: result1
+
+  
+        - name: check Hive
+          ansible.builtin.raw: curl 192.168.1.11:10002 | grep  '<h1>HiveServer2</h1>'
+          register: result2
+
+        - name: format hive  result
+          ansible.builtin.raw: echo "{{result2}}" | grep -o -w  'HiveServer2'
+          register: result2
+
+        - name: format hive rsult 2
+          ansible.builtin.raw: echo "{{result2.stdout}}"  | sort -u | tr -s '\r\n' '-' 
+          register: result2
+      ignore_errors: True
+
+    - name: Zookeepr status msg
+      ansible.builtin.debug:
+        msg: "Zookeeper OK"
+      when: result.stdout == "Zookeeper-"
+    
+    - name: Hive status msg
+      ansible.builtin.debug:
+        msg: "Hive OK"
+      when: result2.stdout == "-HiveServer2-"
+
+    - name: Oozie status msg
+      ansible.builtin.debug:
+        msg: "Oozie OK"
+      when: result1.stdout == "buildVersion-"
